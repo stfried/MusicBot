@@ -454,10 +454,15 @@ class MusicBot(discord.Client):
 
     async def on_player_finished_playing(self, player, **_):
         if not player.playlist.entries and not player.current_entry and self.config.auto_playlist:
-            await self.reset_cred(self.channel.server, self.channel, True)
+            #Reset creds if first run
+            if self.channel:
+                await self.reset_cred(self.channel.server, self.channel, True)
             while self.autoplaylist:
+                #Reset creds
                 if self.channel:
                     await self.reset_cred(self.channel.server, self.channel)
+                #RESET VOLUME
+                await self.change_volume(player, "10")
                 song_url = choice(self.autoplaylist)
                 info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
@@ -487,6 +492,7 @@ class MusicBot(discord.Client):
     async def on_player_entry_added(self, playlist, entry, **_):
         pass
 
+    #TODO: Mirror current implementation to allow for swapping now playing
     async def update_now_playing(self, entry=None, is_paused=False):
         game = None
 
@@ -1094,7 +1100,7 @@ class MusicBot(discord.Client):
                     expire_in=30
                 )
 
-            try:
+            try: #TODO ADDS TO PLAYLIST HERE
                 entry, position = await player.playlist.add_entry(song_url, channel=channel, author=author)
 
             except exceptions.WrongEntryTypeError as e:
@@ -1515,7 +1521,10 @@ class MusicBot(discord.Client):
 
             player.skip()  # check autopause stuff here
             await self._manual_delete_check(message)
+            #Reset creds
             await self.reset_cred(channel.server, channel)
+            #Reset volume
+            await self.change_volume(player, "10")
             return
 
         # TODO: ignore person if they're deaf or take them out of the list or something?
@@ -1531,7 +1540,10 @@ class MusicBot(discord.Client):
 
         if skips_remaining <= 0:
             player.skip()  # check autopause stuff here
+            #Reset creds
             await self.reset_cred(channel.server, channel)
+            #Reset volume
+            await self.change_volume(player, "10")
             return Response(
                 'your skip for **{}** was acknowledged.'
                 '\nThe vote to skip has been passed.{}'.format(
@@ -1554,16 +1566,8 @@ class MusicBot(discord.Client):
                 reply=True,
                 delete_after=20
             )
-
-    async def cmd_volume(self, message, player, new_volume=None):
-        """
-        Usage:
-            {command_prefix}volume (+/-)[volume]
-
-        Sets the playback volume. Accepted values are from 1 to 100.
-        Putting + or - before the volume will make the volume change relative to the current volume.
-        """
-
+            
+    async def change_volume(self, player, new_volume=None):
         if not new_volume:
             return Response('Current volume: `%s%%`' % int(player.volume * 100), reply=True, delete_after=20)
 
@@ -1596,6 +1600,18 @@ class MusicBot(discord.Client):
             else:
                 raise exceptions.CommandError(
                     'Unreasonable volume provided: {}%. Provide a value between 1 and 100.'.format(new_volume), expire_in=20)
+        
+
+    async def cmd_volume(self, message, player, new_volume=None):
+        """
+        Usage:
+            {command_prefix}volume (+/-)[volume]
+
+        Sets the playback volume. Accepted values are from 1 to 100.
+        Putting + or - before the volume will make the volume change relative to the current volume.
+        """
+        return await self.change_volume(player, new_volume)
+        
 
     async def cmd_queue(self, channel, player):
         """
@@ -1918,7 +1934,7 @@ class MusicBot(discord.Client):
         raise exceptions.RestartSignal
 
     async def cmd_shutdown(self, channel):
-        await self.change_nick(channel.server, channel, "MIKE", True)
+        await self.change_nick(channel.server, channel, "MIKE (ASLEEP)", True)
         await self.setavatar(None, sleep_icon, True)
         await self.safe_send_message(channel, ":wave:")
         await self.disconnect_all_voice_clients()
