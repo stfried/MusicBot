@@ -82,6 +82,7 @@ class MusicBot(discord.Client):
         self.exit_signal = None
         self.init_ok = False
         self.cached_client_id = None
+        self.naruto_flag = False
 
         if not self.autoplaylist:
             print("Warning: Autoplaylist is empty, disabling.")
@@ -398,6 +399,9 @@ class MusicBot(discord.Client):
             else:
                 newmsg = 'Now playing in %s: **%s**' % (
                     player.voice_client.channel.name, entry.title)
+                if entry.title == 'Naruto german opening':
+                    newmsg = 'BELIEEEEEEEVE IT!\n' + newmsg
+                    newmsg += '\nhttp://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760'
 
             if self.server_specific_data[channel.server]['last_np_msg']:
                 self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_edit_message(last_np_msg, newmsg, send_if_fail=True)
@@ -720,6 +724,31 @@ class MusicBot(discord.Client):
         print()
         # t-t-th-th-that's all folks!
 
+    async def change_nick(self, server, channel, nick):
+        if not channel.permissions_for(server.me).change_nickname:
+            print("Failed to change nickname: no permission.\n")
+            #raise exceptions.CommandError("Unable to change nickname: no permission.")
+        else:
+            try:
+                await self.change_nickname(server.me, nick)
+            except Exception as e:
+                raise exceptions.CommandError(e, expire_in=20)
+        
+    async def cmd_naruto(self, server, player, channel, author, permissions):
+        """
+        Usage:
+            {command_prefix}naruto
+            
+        BELIEVE IT!
+        """
+        #Set nickname
+        self.naruto_flag = True
+        await self.change_nick(server, channel, "KAKASHI")
+        #self, player, channel, author, permissions, leftover_args, song_url
+        response = await self.cmd_play(player, channel, author, permissions, None, 'https://www.youtube.com/watch?v=d8xoTBZrzko')
+        response.content = "Naruto! I'm on my way!\n" + response.content + "\nhttp://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg"
+        return response
+        
     async def cmd_help(self, command=None):
         """
         Usage:
@@ -1939,6 +1968,9 @@ class MusicBot(discord.Client):
                     expire_in=response.delete_after if self.config.delete_messages else 0,
                     also_delete=message if self.config.delete_invoking else None
                 )
+            if self.naruto_flag == True:
+                self.naruto_flag = False
+                await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
