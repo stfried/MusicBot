@@ -744,7 +744,8 @@ class MusicBot(discord.Client):
         #Set nickname
         self.naruto_flag = True
         await self.change_nick(server, channel, "KAKASHI")
-        #self, player, channel, author, permissions, leftover_args, song_url
+        #Set avatar
+        await self.setavatar(None,'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814')
         response = await self.cmd_play(player, channel, author, permissions, None, 'https://www.youtube.com/watch?v=d8xoTBZrzko')
         response.content = "Naruto! I'm on my way!\n" + response.content + "\nhttp://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg"
         return response
@@ -1800,18 +1801,10 @@ class MusicBot(discord.Client):
             raise exceptions.CommandError(e, expire_in=20)
 
         return Response(":ok_hand:", delete_after=20)
-
-    @owner_only
-    async def cmd_setavatar(self, message, url=None):
-        """
-        Usage:
-            {command_prefix}setavatar [url]
-
-        Changes the bot's avatar.
-        Attaching a file and leaving the url parameter blank also works.
-        """
-
-        if message.attachments:
+        
+        
+    async def setavatar(self, message, url=None):
+        if message and message.attachments:
             thing = message.attachments[0]['url']
         else:
             thing = url.strip('<>')
@@ -1824,6 +1817,16 @@ class MusicBot(discord.Client):
         except Exception as e:
             raise exceptions.CommandError("Unable to change avatar: %s" % e, expire_in=20)
 
+    @owner_only
+    async def cmd_setavatar(self, message, url=None):
+        """
+        Usage:
+            {command_prefix}setavatar [url]
+
+        Changes the bot's avatar.
+        Attaching a file and leaving the url parameter blank also works.
+        """
+        await self.setavatar(message, url)
         return Response(":ok_hand:", delete_after=20)
 
 
@@ -1971,6 +1974,7 @@ class MusicBot(discord.Client):
             if self.naruto_flag == True:
                 self.naruto_flag = False
                 await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
+                await self.setavatar(None,'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en')
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
