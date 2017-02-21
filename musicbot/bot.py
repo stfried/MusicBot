@@ -37,6 +37,14 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
 load_opus_lib()
 
+class SpecialTitle:
+    def __init__(self, title, message=None, link=None, name=None, photo=None):
+        self.title = title
+        self.message = message
+        self.link = link
+        self.name = name
+        self.photo = photo
+
 
 class SkipState:
     def __init__(self):
@@ -82,7 +90,10 @@ class MusicBot(discord.Client):
         self.exit_signal = None
         self.init_ok = False
         self.cached_client_id = None
-        self.naruto_flag = False
+        self.cred_changed = False
+        self.special_titles = []
+        self.special_titles.append(SpecialTitle("Naruto german opening", "BELIEEEEEEEVE IT!", "http://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760", "NARUTO", "http://vignette4.wikia.nocookie.net/fear-world/images/7/7e/Naruto's_Sexy_Jutsu.jpg/revision/latest?cb=20140424231800"))
+        self.channel = None
 
         if not self.autoplaylist:
             print("Warning: Autoplaylist is empty, disabling.")
@@ -375,6 +386,18 @@ class MusicBot(discord.Client):
             self.players[server.id] = player
 
         return self.players[server.id]
+        
+    async def check_titles(self, server, channel, title, msg):
+        for t in self.special_titles:
+            if title == t.title:
+                if t.name:
+                    await self.change_nick(server, channel, t.name)
+                    self.cred_changed = True
+                if t.photo:
+                    await self.setavatar(None, t.photo)
+                    self.cred_changed = True
+                return t.message + '\n' + msg + '\n' + t.link
+        return msg 
 
     async def on_player_play(self, player, entry):
         await self.update_now_playing(entry)
@@ -399,9 +422,8 @@ class MusicBot(discord.Client):
             else:
                 newmsg = 'Now playing in %s: **%s**' % (
                     player.voice_client.channel.name, entry.title)
-                if entry.title == 'Naruto german opening':
-                    newmsg = 'BELIEEEEEEEVE IT!\n' + newmsg
-                    newmsg += '\nhttp://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760'
+                #ADD SONG SPECIFIC OUTPUT
+                newmsg = await self.check_titles(channel.server, channel, entry.title, newmsg)
 
             if self.server_specific_data[channel.server]['last_np_msg']:
                 self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_edit_message(last_np_msg, newmsg, send_if_fail=True)
@@ -420,6 +442,8 @@ class MusicBot(discord.Client):
     async def on_player_finished_playing(self, player, **_):
         if not player.playlist.entries and not player.current_entry and self.config.auto_playlist:
             while self.autoplaylist:
+                if self.channel:
+                    await self.reset_cred(self.channel.server, self.channel)
                 song_url = choice(self.autoplaylist)
                 info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
@@ -742,13 +766,34 @@ class MusicBot(discord.Client):
         BELIEVE IT!
         """
         #Set nickname
-        self.naruto_flag = True
+        self.cred_changed = True
+        self.channel = channel
         await self.change_nick(server, channel, "KAKASHI")
         #Set avatar
         await self.setavatar(None,'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814')
         response = await self.cmd_play(player, channel, author, permissions, None, 'https://www.youtube.com/watch?v=d8xoTBZrzko')
         response.content = "Naruto! I'm on my way!\n" + response.content + "\nhttp://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg"
         return response
+        
+    async def cmd_remove(self, player, author, leftover_args):
+        """
+        Usage:
+            {command_prefix}remove index
+
+        Removes specified song from playlist
+        """
+        try:
+            leftover_args = shlex.split(' '.join(leftover_args))
+            o_index = int(leftover_args.pop(0))
+            index = o_index - 1
+            if index < 0 or index > len(player.playlist.entries):
+                raise ValueError()
+            entry = player.playlist.entries[index]
+            player.playlist.entries.remove(entry)
+        except ValueError:
+            return Response('Invalid index. Please try again.', delete_after=20)        
+            
+        return Response('Successfully removed ' + str(o_index) + ' from queue!', delete_after=20)
         
     async def cmd_help(self, command=None):
         """
@@ -1453,6 +1498,7 @@ class MusicBot(discord.Client):
 
             player.skip()  # check autopause stuff here
             await self._manual_delete_check(message)
+            await self.reset_cred(channel.server, channel)
             return
 
         # TODO: ignore person if they're deaf or take them out of the list or something?
@@ -1468,6 +1514,7 @@ class MusicBot(discord.Client):
 
         if skips_remaining <= 0:
             player.skip()  # check autopause stuff here
+            await self.reset_cred(channel.server, channel)
             return Response(
                 'your skip for **{}** was acknowledged.'
                 '\nThe vote to skip has been passed.{}'.format(
@@ -1971,10 +2018,13 @@ class MusicBot(discord.Client):
                     expire_in=response.delete_after if self.config.delete_messages else 0,
                     also_delete=message if self.config.delete_invoking else None
                 )
-            if self.naruto_flag == True:
-                self.naruto_flag = False
+            await self.reset_cred(message.server, message.channel)
+            """
+            if self.cred_changed == True:
+                self.cred_changed = False
                 await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
                 await self.setavatar(None,'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en')
+            """
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
@@ -1997,6 +2047,13 @@ class MusicBot(discord.Client):
             if self.config.debug_mode:
                 await self.safe_send_message(message.channel, '```\n%s\n```' % traceback.format_exc())
 
+    async def reset_cred(self, server, channel):
+        if self.cred_changed == True:
+            self.cred_changed = False
+            #await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
+            await self.change_nick(server, channel, "MIKE")
+            await self.setavatar(None,'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en')
+                
     async def on_voice_state_update(self, before, after):
         if not all([before, after]):
             return
