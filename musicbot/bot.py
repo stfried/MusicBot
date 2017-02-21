@@ -37,6 +37,15 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
 load_opus_lib()
 
+#IMAGE LINKS
+naruto_icon = "http://vignette4.wikia.nocookie.net/fear-world/images/7/7e/Naruto's_Sexy_Jutsu.jpg/revision/latest?cb=20140424231800"
+naruto_img = "http://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760"
+kakashi_icon = 'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814'
+kakashi_img = 'http://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg'
+mike_icon = 'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en'
+locked_icon = 'http://image.prntscr.com/image/04ddf9d8e00a4c97825f17e558fbe216.png'
+sleep_icon = 'https://t4.rbxcdn.com/9d33b63ceecd5d73bfcf32aa099b5fa8'
+
 class SpecialTitle:
     def __init__(self, title, message=None, link=None, name=None, photo=None):
         self.title = title
@@ -90,10 +99,13 @@ class MusicBot(discord.Client):
         self.exit_signal = None
         self.init_ok = False
         self.cached_client_id = None
+        
+        self.rebooted = True
         self.cred_changed = False
         self.special_titles = []
-        self.special_titles.append(SpecialTitle("Naruto german opening", "BELIEEEEEEEVE IT!", "http://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760", "NARUTO", "http://vignette4.wikia.nocookie.net/fear-world/images/7/7e/Naruto's_Sexy_Jutsu.jpg/revision/latest?cb=20140424231800"))
+        self.special_titles.append(SpecialTitle("Naruto german opening", "BELIEEEEEEEVE IT!", naruto_img, "NARUTO", naruto_icon))
         self.channel = None
+        self.locked = False
 
         if not self.autoplaylist:
             print("Warning: Autoplaylist is empty, disabling.")
@@ -189,6 +201,7 @@ class MusicBot(discord.Client):
                         player.play()
 
                     if self.config.auto_playlist:
+                        self.channel = channel
                         await self.on_player_finished_playing(player)
 
                     joined_servers.append(channel.server)
@@ -441,6 +454,7 @@ class MusicBot(discord.Client):
 
     async def on_player_finished_playing(self, player, **_):
         if not player.playlist.entries and not player.current_entry and self.config.auto_playlist:
+            await self.reset_cred(self.channel.server, self.channel, True)
             while self.autoplaylist:
                 if self.channel:
                     await self.reset_cred(self.channel.server, self.channel)
@@ -575,6 +589,7 @@ class MusicBot(discord.Client):
 
     # noinspection PyMethodOverriding
     def run(self):
+
         try:
             self.loop.run_until_complete(self.start(*self.config.auth))
 
@@ -741,6 +756,7 @@ class MusicBot(discord.Client):
                 print("Done!", flush=True)  # TODO: Change this to "Joined server/channel"
                 if self.config.auto_playlist:
                     print("Starting auto-playlist")
+                    self.channel = owner_vc
                     await self.on_player_finished_playing(await self.get_player(owner_vc))
             else:
                 print("Owner not found in a voice channel, could not autosummon.")
@@ -748,15 +764,16 @@ class MusicBot(discord.Client):
         print()
         # t-t-th-th-that's all folks!
 
-    async def change_nick(self, server, channel, nick):
-        if not channel.permissions_for(server.me).change_nickname:
-            print("Failed to change nickname: no permission.\n")
-            #raise exceptions.CommandError("Unable to change nickname: no permission.")
-        else:
-            try:
-                await self.change_nickname(server.me, nick)
-            except Exception as e:
-                raise exceptions.CommandError(e, expire_in=20)
+    async def change_nick(self, server, channel, nick, override=False):
+        if override or not self.locked:
+            if not channel.permissions_for(server.me).change_nickname:
+                print("Failed to change nickname: no permission.\n")
+                #raise exceptions.CommandError("Unable to change nickname: no permission.")
+            else:
+                try:
+                    await self.change_nickname(server.me, nick)
+                except Exception as e:
+                    raise exceptions.CommandError(e, expire_in=20)
         
     async def cmd_naruto(self, server, player, channel, author, permissions):
         """
@@ -770,9 +787,9 @@ class MusicBot(discord.Client):
         self.channel = channel
         await self.change_nick(server, channel, "KAKASHI")
         #Set avatar
-        await self.setavatar(None,'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814')
+        await self.setavatar(None,kakashi_icon)
         response = await self.cmd_play(player, channel, author, permissions, None, 'https://www.youtube.com/watch?v=d8xoTBZrzko')
-        response.content = "Naruto! I'm on my way!\n" + response.content + "\nhttp://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg"
+        response.content = "Naruto! I'm on my way!\n" + response.content + "\n" + kakashi_img
         return response
         
     async def cmd_remove(self, player, author, leftover_args):
@@ -1401,7 +1418,7 @@ class MusicBot(discord.Client):
 
         if player.is_stopped:
             player.play()
-
+        self.channel = channel
         if self.config.auto_playlist:
             await self.on_player_finished_playing(player)
 
@@ -1850,19 +1867,20 @@ class MusicBot(discord.Client):
         return Response(":ok_hand:", delete_after=20)
         
         
-    async def setavatar(self, message, url=None):
-        if message and message.attachments:
-            thing = message.attachments[0]['url']
-        else:
-            thing = url.strip('<>')
+    async def setavatar(self, message, url=None, override=False):
+        if override or not self.locked:
+            if message and message.attachments:
+                thing = message.attachments[0]['url']
+            else:
+                thing = url.strip('<>')
 
-        try:
-            with aiohttp.Timeout(10):
-                async with self.aiosession.get(thing) as res:
-                    await self.edit_profile(avatar=await res.read())
+            try:
+                with aiohttp.Timeout(10):
+                    async with self.aiosession.get(thing) as res:
+                        await self.edit_profile(avatar=await res.read())
 
-        except Exception as e:
-            raise exceptions.CommandError("Unable to change avatar: %s" % e, expire_in=20)
+            except Exception as e:
+                raise exceptions.CommandError("Unable to change avatar: %s" % e, expire_in=20)
 
     @owner_only
     async def cmd_setavatar(self, message, url=None):
@@ -1873,8 +1891,21 @@ class MusicBot(discord.Client):
         Changes the bot's avatar.
         Attaching a file and leaving the url parameter blank also works.
         """
-        await self.setavatar(message, url)
+        await self.setavatar(message, url, True)
         return Response(":ok_hand:", delete_after=20)
+
+    @owner_only
+    async def cmd_lock(self, server, channel):
+        self.locked = True
+        await self.change_nick(server, channel, "MIKE (LOCKED)", True)
+        await self.setavatar(None, locked_icon, True)
+        return Response("The owner has locked the bot temporarily. All access denied. :lock:", delete_after=30)
+        
+    @owner_only
+    async def cmd_unlock(self, server, channel):
+        self.locked = False
+        await self.reset_cred(server, channel, True)
+        return Response("The owner has unlocked the bot. :unlock:", delete_after=30)
 
 
     async def cmd_disconnect(self, server):
@@ -1887,6 +1918,8 @@ class MusicBot(discord.Client):
         raise exceptions.RestartSignal
 
     async def cmd_shutdown(self, channel):
+        await self.change_nick(channel.server, channel, "MIKE", True)
+        await self.setavatar(None, sleep_icon, True)
         await self.safe_send_message(channel, ":wave:")
         await self.disconnect_all_voice_clients()
         raise exceptions.TerminateSignal
@@ -2007,6 +2040,11 @@ class MusicBot(discord.Client):
                 )
                 return
 
+            #If locked, check if owner
+            if self.locked:
+                if message and message.author.id != self.config.owner_id:
+                    raise exceptions.PermissionsError("Owner has locked the bot. Please try again later.", expire_in=30)
+                    
             response = await handler(**handler_kwargs)
             if response and isinstance(response, Response):
                 content = response.content
@@ -2019,12 +2057,6 @@ class MusicBot(discord.Client):
                     also_delete=message if self.config.delete_invoking else None
                 )
             await self.reset_cred(message.server, message.channel)
-            """
-            if self.cred_changed == True:
-                self.cred_changed = False
-                await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
-                await self.setavatar(None,'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en')
-            """
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
@@ -2047,12 +2079,12 @@ class MusicBot(discord.Client):
             if self.config.debug_mode:
                 await self.safe_send_message(message.channel, '```\n%s\n```' % traceback.format_exc())
 
-    async def reset_cred(self, server, channel):
-        if self.cred_changed == True:
+    async def reset_cred(self, server, channel, override=False):
+        if override or (self.cred_changed == True and not self.locked):
             self.cred_changed = False
             #await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
             await self.change_nick(server, channel, "MIKE")
-            await self.setavatar(None,'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en')
+            await self.setavatar(None,mike_icon)
                 
     async def on_voice_state_update(self, before, after):
         if not all([before, after]):
