@@ -462,7 +462,7 @@ class MusicBot(discord.Client):
                 if self.channel:
                     await self.reset_cred(self.channel.server, self.channel)
                 #RESET VOLUME
-                await self.change_volume(player, "10")
+                await self.change_volume(player, new_volume="10")
                 song_url = choice(self.autoplaylist)
                 info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
@@ -803,7 +803,7 @@ class MusicBot(discord.Client):
         Usage:
             {command_prefix}remove index
 
-        Removes specified song from playlist
+        Removes specified song from playlist. May only be used to delete songs you added.
         """
         try:
             leftover_args = shlex.split(' '.join(leftover_args))
@@ -812,11 +812,15 @@ class MusicBot(discord.Client):
             if index < 0 or index > len(player.playlist.entries):
                 raise ValueError()
             entry = player.playlist.entries[index]
-            player.playlist.entries.remove(entry)
+            #CHECK IF OWNER OR CREATOR OF ENTRY
+            if author.id == self.config.owner_id or (entry.meta.get('author', False) and entry.meta['author'] == author.id):
+                player.playlist.entries.remove(entry)
+                return Response('Successfully removed ' + str(o_index) + ' from queue!', delete_after=20)
+            else:
+                return Response('That\'s not yours to delete!', delete_after=20)
+                
         except ValueError:
             return Response('Invalid index. Please try again.', delete_after=20)        
-            
-        return Response('Successfully removed ' + str(o_index) + ' from queue!', delete_after=20)
         
     async def cmd_help(self, command=None):
         """
@@ -1567,7 +1571,7 @@ class MusicBot(discord.Client):
                 delete_after=20
             )
             
-    async def change_volume(self, player, new_volume=None):
+    async def change_volume(self, player, permissions=None, new_volume=None):
         if not new_volume:
             return Response('Current volume: `%s%%`' % int(player.volume * 100), reply=True, delete_after=20)
 
@@ -1586,8 +1590,14 @@ class MusicBot(discord.Client):
             new_volume += (player.volume * 100)
 
         old_volume = int(player.volume * 100)
+        
+        l_bound = 5
+        u_bound = 30
+        if not permissions or permissions.name == 'DJ' or permissions.name == 'MusicMaster':
+            l_bound = 0
+            u_bound = 100
 
-        if 0 < new_volume <= 100:
+        if l_bound < new_volume <= u_bound:
             player.volume = new_volume / 100.0
 
             return Response('updated volume from %d to %d' % (old_volume, new_volume), reply=True, delete_after=20)
@@ -1596,21 +1606,23 @@ class MusicBot(discord.Client):
             if relative:
                 raise exceptions.CommandError(
                     'Unreasonable volume change provided: {}{:+} -> {}%.  Provide a change between {} and {:+}.'.format(
-                        old_volume, vol_change, old_volume + vol_change, 1 - old_volume, 100 - old_volume), expire_in=20)
+                        old_volume, vol_change, old_volume + vol_change, l_bound - old_volume, u_bound - old_volume), expire_in=20)
             else:
                 raise exceptions.CommandError(
-                    'Unreasonable volume provided: {}%. Provide a value between 1 and 100.'.format(new_volume), expire_in=20)
+                    'Unreasonable volume provided: {}%. Provide a value between {}% and {}%.'.format(new_volume, l_bound, u_bound), expire_in=20)
         
 
-    async def cmd_volume(self, message, player, new_volume=None):
+    async def cmd_volume(self, message, player, permissions, new_volume=None):
         """
         Usage:
             {command_prefix}volume (+/-)[volume]
 
-        Sets the playback volume. Accepted values are from 1 to 100.
+        Sets the playback volume. Accepted values are from 5 to 30 for users, 1 to 100 for administrators.
         Putting + or - before the volume will make the volume change relative to the current volume.
         """
-        return await self.change_volume(player, new_volume)
+        if message.author.id == self.config.owner_id:
+            permissions = None
+        return await self.change_volume(player, permissions, new_volume)
         
 
     async def cmd_queue(self, channel, player):
