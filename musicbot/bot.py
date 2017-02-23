@@ -8,6 +8,7 @@ import aiohttp
 import discord
 import asyncio
 import traceback
+import re
 
 from discord import utils
 from discord.object import Object
@@ -45,15 +46,95 @@ kakashi_img = 'http://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroo
 mike_icon = 'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en'
 locked_icon = 'http://image.prntscr.com/image/04ddf9d8e00a4c97825f17e558fbe216.png'
 sleep_icon = 'https://t4.rbxcdn.com/9d33b63ceecd5d73bfcf32aa099b5fa8'
+rocky_icon = 'https://lh5.googleusercontent.com/-kBQXFl1dyhg/AAAAAAAAAAI/AAAAAAAAAME/W4fNPKTw1Gw/photo.jpg'
+pikachu_icon = 'http://vignette4.wikia.nocookie.net/pokemon/images/5/5f/025Pikachu_OS_anime_11.png/revision/latest?cb=20150717063951'
+guzma_icon = 'http://image.prntscr.com/image/d23c0128d85840d68347d8371f3e088c.png'
 
 class SpecialTitle:
-    def __init__(self, title, message=None, link=None, name=None, photo=None):
-        self.title = title
+    def __init__(self, message="", link=None, name=None, photo=None, volume="10"):
         self.message = message
         self.link = link
         self.name = name
         self.photo = photo
+        self.volume = volume
+        
+def clean(string):
+    string = string.strip(' \'\t\r\n')
+    if(string[-1:] == ')' and string[0] == '('):
+        string = string[1:-1]
+    return string
 
+class BoolEqn:
+    def __init__(self, string):
+        self.raw = string
+        #print (self.raw)
+        self.components = []
+        self.find_main_operator()
+        
+    
+    def find_main_operator(self):
+        par = []
+        i = 0
+        not_location = -1
+        while i < len(self.raw):
+            if len(par) == 0:
+                if self.raw[i:i+2] == 'or':                    
+                    self.components.append(BoolEqn(clean(self.raw[:i])))
+                    self.components.append('or')
+                    self.components.append(BoolEqn(clean(self.raw[i+3:])))
+                    return
+                if self.raw[i:i+3] == 'and':
+                    self.components.append(BoolEqn(clean(self.raw[:i])))
+                    self.components.append('and')
+                    self.components.append(BoolEqn(clean(self.raw[i+4:])))
+                    return
+                if self.raw[i:i+3] == 'not':
+                    not_location = i
+            if self.raw[i] == '(':
+                par = ['('] + par
+            if self.raw[i] == ')':
+                par.pop()
+            if self.raw[i] == '"':
+                i += 1
+                while self.raw[i] != '"':
+                    i += 1
+            i += 1
+        if not_location != -1:
+            self.components.append('not')
+            self.components.append(BoolEqn(clean(self.raw[not_location+3:])))
+            return
+        self.components.append(self.raw)
+        return
+
+    def evaluate(self, string):
+        if len(self.components) == 1:
+            ret = self.components[0].strip(' "\'\t\r\n\(') in string
+            return ret
+        elif len(self.components) == 2:
+            ret = not self.components[1].evaluate(string)
+            return ret
+        else:
+            left = self.components[0].evaluate(string)
+            right = self.components[2].evaluate(string)
+            if self.components[1] == 'or':
+                ret = left or right
+                return ret
+            else:
+                ret = left and right
+                return ret
+
+        
+
+class PatternTitle:
+    def __init__(self, pattern, message=None, link=None, name=None, photo=None, volume="10"):
+        #pattern is accepted as a boolean string, ie. '("pokemon" or "pokémon") and "wally"'
+        self.message = message
+        self.link = link
+        self.name = name
+        self.photo = photo
+        self.volume = volume
+        self.pattern = BoolEqn(pattern)
+        
 
 class SkipState:
     def __init__(self):
@@ -101,9 +182,19 @@ class MusicBot(discord.Client):
         self.cached_client_id = None
         
         self.rebooted = True
-        self.cred_changed = False
-        self.special_titles = []
-        self.special_titles.append(SpecialTitle("Naruto german opening", "BELIEEEEEEEVE IT!", naruto_img, "NARUTO", naruto_icon))
+        self.cred_changed = [False]
+        self.one_time_cred_change = [True]
+        
+        self.special_titles = {}
+        self.special_titles["Naruto german opening"] = SpecialTitle("BELIEEEEEEEVE IT!", naruto_img, "NARUTO", naruto_icon)
+        self.special_titles["Bardzo super sławny (Very super famous) - Jon Lajoie POLSKIE NAPISY"] = SpecialTitle("What's up guys, Rocky Reborn here with another music video.", rocky_icon, "ROCKY REBORN", rocky_icon, "20")
+        
+        self.pattern_titles = []
+        self.pattern_titles.append(PatternTitle('("pokemon" or "pokémon") and "skull"', name="YA BOY GUZMA", photo=guzma_icon))
+        self.pattern_titles.append(PatternTitle('"pokemon" or "pokémon"', name="Pika!", photo=pikachu_icon))
+        #self.pattern_titles.append(PatternTitle("pokemon", name="Pika!", photo=pikachu_icon))
+        #self.pattern_titles.append(PatternTitle("pokémon", name="Pika!", photo=pikachu_icon))
+        
         self.channel = None
         self.locked = False
 
@@ -400,16 +491,32 @@ class MusicBot(discord.Client):
 
         return self.players[server.id]
         
-    async def check_titles(self, server, channel, title, msg):
-        for t in self.special_titles:
-            if title == t.title:
-                if t.name:
-                    await self.change_nick(server, channel, t.name)
-                    self.cred_changed = True
-                if t.photo:
-                    await self.setavatar(None, t.photo)
-                    self.cred_changed = True
-                return t.message + '\n' + msg + '\n' + t.link
+    async def check_titles(self, player, server, channel, title, msg):        
+        if title in self.special_titles:
+            t = self.special_titles[title]
+        else:
+            #Convert to lowercase first, due to title inconsistencies
+            title_l = title.lower()
+            title_l = re.sub('[\()]','',title_l)
+            for t in self.pattern_titles:
+                #print(t.pattern.raw)
+                #print(title_l)
+                #print(t.pattern.evaluate(title_l))
+                if t.pattern.evaluate(title_l):
+                    break
+                t = None
+        if t:
+            if t.name:
+                await self.change_nick(server, channel, t.name)
+                self.cred_changed[0] = True
+            if t.photo:
+                await self.setavatar(None, t.photo)
+                self.cred_changed[0] = True
+            await self.change_volume(player, new_volume=t.volume)
+            if t.message:
+                msg = t.message + '\n' + msg
+            if t.link:
+                msg += '\n' + t.link               
         return msg 
 
     async def on_player_play(self, player, entry):
@@ -418,7 +525,6 @@ class MusicBot(discord.Client):
 
         channel = entry.meta.get('channel', None)
         author = entry.meta.get('author', None)
-
         if channel and author:
             last_np_msg = self.server_specific_data[channel.server]['last_np_msg']
             if last_np_msg and last_np_msg.channel == channel:
@@ -435,13 +541,15 @@ class MusicBot(discord.Client):
             else:
                 newmsg = 'Now playing in %s: **%s**' % (
                     player.voice_client.channel.name, entry.title)
-                #ADD SONG SPECIFIC OUTPUT
-                newmsg = await self.check_titles(channel.server, channel, entry.title, newmsg)
-
+            #ADD SONG SPECIFIC OUTPUT
+            newmsg = await self.check_titles(player, channel.server, channel, entry.title, newmsg)
             if self.server_specific_data[channel.server]['last_np_msg']:
                 self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_edit_message(last_np_msg, newmsg, send_if_fail=True)
             else:
                 self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_send_message(channel, newmsg)
+        elif self.channel:
+            await self.check_titles(player, self.channel.server, self.channel, entry.title, " ")
+            
 
     async def on_player_resume(self, entry, **_):
         await self.update_now_playing(entry)
@@ -456,11 +564,11 @@ class MusicBot(discord.Client):
         if not player.playlist.entries and not player.current_entry and self.config.auto_playlist:
             #Reset creds if first run
             if self.channel:
-                await self.reset_cred(self.channel.server, self.channel, True)
+                await self.reset_cred(self.channel.server, self.channel, self.one_time_cred_change)
             while self.autoplaylist:
                 #Reset creds
                 if self.channel:
-                    await self.reset_cred(self.channel.server, self.channel)
+                    await self.reset_cred(self.channel.server, self.channel, self.cred_changed)
                 #RESET VOLUME
                 await self.change_volume(player, new_volume="10")
                 song_url = choice(self.autoplaylist)
@@ -789,7 +897,7 @@ class MusicBot(discord.Client):
         BELIEVE IT!
         """
         #Set nickname
-        self.cred_changed = True
+        self.one_time_cred_change[0] = True
         self.channel = channel
         await self.change_nick(server, channel, "KAKASHI")
         #Set avatar
@@ -1508,7 +1616,6 @@ class MusicBot(discord.Client):
 
         Skips the current song when enough votes are cast, or by the bot owner.
         """
-
         if player.is_stopped:
             raise exceptions.CommandError("Can't skip! The player is not playing!", expire_in=20)
 
@@ -1534,7 +1641,7 @@ class MusicBot(discord.Client):
             player.skip()  # check autopause stuff here
             await self._manual_delete_check(message)
             #Reset creds
-            await self.reset_cred(channel.server, channel)
+            await self.reset_cred(channel.server, channel, self.cred_changed)
             #Reset volume
             await self.change_volume(player, new_volume="10")
             return
@@ -1553,7 +1660,7 @@ class MusicBot(discord.Client):
         if skips_remaining <= 0:
             player.skip()  # check autopause stuff here
             #Reset creds
-            await self.reset_cred(channel.server, channel)
+            await self.reset_cred(channel.server, channel, self.cred_changed)
             #Reset volume
             await self.change_volume(player, new_volume="10")
             return Response(
@@ -1959,7 +2066,7 @@ class MusicBot(discord.Client):
         Owner only, unlocks the bot for user control.
         """
         self.locked = False
-        await self.reset_cred(server, channel, True)
+        await self.reset_cred(server, channel, override=True)
         return Response("The owner has unlocked the bot. :unlock:", delete_after=30)
 
 
@@ -2111,7 +2218,8 @@ class MusicBot(discord.Client):
                     expire_in=response.delete_after if self.config.delete_messages else 0,
                     also_delete=message if self.config.delete_invoking else None
                 )
-            await self.reset_cred(message.server, message.channel)
+            #If one_time_cred_change: reset
+            await self.reset_cred(message.server, message.channel, self.one_time_cred_change)
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
@@ -2134,9 +2242,10 @@ class MusicBot(discord.Client):
             if self.config.debug_mode:
                 await self.safe_send_message(message.channel, '```\n%s\n```' % traceback.format_exc())
 
-    async def reset_cred(self, server, channel, override=False):
-        if override or (self.cred_changed == True and not self.locked):
-            self.cred_changed = False
+    async def reset_cred(self, server, channel, condition=[False], override=False):
+        if override or (condition[0] and not self.locked):
+            print("reset cred called")
+            condition[0] = False
             #await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
             await self.change_nick(server, channel, "MIKE")
             await self.setavatar(None,mike_icon)
