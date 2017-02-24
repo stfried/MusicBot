@@ -38,20 +38,8 @@ from .constants import DISCORD_MSG_CHAR_LIMIT, AUDIO_CACHE_PATH
 
 load_opus_lib()
 
-#IMAGE LINKS
-naruto_icon = "http://vignette4.wikia.nocookie.net/fear-world/images/7/7e/Naruto's_Sexy_Jutsu.jpg/revision/latest?cb=20140424231800"
-naruto_img = "http://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760"
-kakashi_icon = 'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814'
-kakashi_img = 'http://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg'
-mike_icon = 'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en'
-locked_icon = 'http://image.prntscr.com/image/04ddf9d8e00a4c97825f17e558fbe216.png'
-sleep_icon = 'https://t4.rbxcdn.com/9d33b63ceecd5d73bfcf32aa099b5fa8'
-rocky_icon = 'https://lh5.googleusercontent.com/-kBQXFl1dyhg/AAAAAAAAAAI/AAAAAAAAAME/W4fNPKTw1Gw/photo.jpg'
-pikachu_icon = 'http://vignette4.wikia.nocookie.net/pokemon/images/5/5f/025Pikachu_OS_anime_11.png/revision/latest?cb=20150717063951'
-guzma_icon = 'http://image.prntscr.com/image/d23c0128d85840d68347d8371f3e088c.png'
-
 class SpecialTitle:
-    def __init__(self, message="", link=None, name=None, photo=None, volume="10"):
+    def __init__(self, message="", link=None, name=None, photo=None, volume=None):
         self.message = message
         self.link = link
         self.name = name
@@ -67,7 +55,6 @@ def clean(string):
 class BoolEqn:
     def __init__(self, string):
         self.raw = string
-        #print (self.raw)
         self.components = []
         self.find_main_operator()
         
@@ -126,7 +113,7 @@ class BoolEqn:
         
 
 class PatternTitle:
-    def __init__(self, pattern, message=None, link=None, name=None, photo=None, volume="10"):
+    def __init__(self, pattern, message=None, link=None, name=None, photo=None, volume=None):
         #pattern is accepted as a boolean string, ie. '("pokemon" or "pokémon") and "wally"'
         self.message = message
         self.link = link
@@ -134,6 +121,65 @@ class PatternTitle:
         self.photo = photo
         self.volume = volume
         self.pattern = BoolEqn(pattern)
+
+
+
+#IMAGE LINKS
+#NARUTO
+naruto_icon = "http://vignette4.wikia.nocookie.net/fear-world/images/7/7e/Naruto's_Sexy_Jutsu.jpg/revision/latest?cb=20140424231800"
+naruto_img = "http://images.techtimes.com/data/images/full/265071/a-younger-naruto-png.png?w=760"
+kakashi_icon = 'http://vignette4.wikia.nocookie.net/naruto/images/2/27/Kakashi_Hatake.png/revision/latest/scale-to-width-down/300?cb=20160304132814'
+kakashi_img = 'http://i288.photobucket.com/albums/ll162/bigbucksben/freelunchroom/kakashi_thumbs_upjpg.jpg'
+#KIRBY
+mike_icon = 'http://vignette1.wikia.nocookie.net/kirby/images/b/be/Mike_Abusement_Park.png/revision/latest?cb=20110621013308&path-prefix=en'
+locked_icon = 'http://image.prntscr.com/image/04ddf9d8e00a4c97825f17e558fbe216.png'
+sleep_icon = 'https://t4.rbxcdn.com/9d33b63ceecd5d73bfcf32aa099b5fa8'
+#MISC
+rocky_icon = 'https://lh5.googleusercontent.com/-kBQXFl1dyhg/AAAAAAAAAAI/AAAAAAAAAME/W4fNPKTw1Gw/photo.jpg'
+#POKEMON
+pikachu_icon = 'http://vignette4.wikia.nocookie.net/pokemon/images/5/5f/025Pikachu_OS_anime_11.png/revision/latest?cb=20150717063951'
+guzma_icon = 'http://image.prntscr.com/image/d23c0128d85840d68347d8371f3e088c.png'
+#SONIC
+sonic_icon = 'http://image.prntscr.com/image/dc717936f79b4b69a05019186b464402.png'
+shadow_icon = 'http://image.prntscr.com/image/af6ba4e6340d456bb5b829f141e3deed.png'
+#UNDERTALE
+toriel_icon = 'http://image.prntscr.com/image/d018388edfbc4f068464f26b0e699f65.png'
+#METAL GEAR
+jesus_icon = 'http://image.prntscr.com/image/4f3ed528e6564d3692250325f7c67a36.png'
+jetstream_icon = 'https://lh5.googleusercontent.com/-dyrLmwdei_0/AAAAAAAAAAI/AAAAAAAAAC8/CNtZ6sbECvE/photo.jpg'
+raiden_icon = 'http://image.prntscr.com/image/0956accc131e47fe8c3269ebfbd91579.png'
+#MARIO
+paper_mario_icon = 'http://i3.kym-cdn.com/entries/icons/original/000/019/991/1089353-paper_mario_wii.jpg'
+doopliss_icon = 'https://www.mariowiki.com/images/thumb/c/c7/Doopliss_-_Paper_Mario_The_Thousand-Year_Door.png/170px-Doopliss_-_Paper_Mario_The_Thousand-Year_Door.png'
+geno_icon = 'http://starsmedia.ign.com/stars/image/object/142/14212391/geno_keyartboxart_160w.jpg'
+memory_mario_icon = 'http://image.prntscr.com/image/b0ac23fc68eb431a859d03ab37c50d95.png'
+#ZELDA
+my_boy_icon = 'http://image.prntscr.com/image/f1be5a4da46e447392503ee4ca1d9c63.png'
+
+special_titles = {}
+special_titles["Naruto german opening"] = SpecialTitle("BELIEEEEEEEVE IT!", naruto_img, "NARUTO", naruto_icon)
+special_titles["Bardzo super sławny (Very super famous) - Jon Lajoie POLSKIE NAPISY"] = SpecialTitle("What's up guys, Rocky Reborn here with another music video.", rocky_icon, "ROCKY REBORN", rocky_icon, "20")
+        
+pattern_titles = []
+#POKEMON
+pattern_titles.append(PatternTitle('("pokemon" or "pokémon") and "skull"', name="YA BOY GUZMA", photo=guzma_icon))
+pattern_titles.append(PatternTitle('("pokemon" or "pokémon") or "poké"', name="Pika!", photo=pikachu_icon))
+#SONIC
+pattern_titles.append(PatternTitle('"sonic" or ("hedgehog" and not "shadow")', name="Sonic", photo=sonic_icon))
+pattern_titles.append(PatternTitle('"shadow" or ("hedgehog" and not "sonic")', name="THE ULTIMATE LIFE FORM", photo=shadow_icon))
+#UNDERTALE
+pattern_titles.append(PatternTitle('"undertale"', name="Vape mom", photo=toriel_icon))
+#METAL GEAR
+pattern_titles.append(PatternTitle('"only thing i know for real"', name="JETSTREAM", photo=jetstream_icon))
+pattern_titles.append(PatternTitle('("metal gear rising" or "mgr") or ("revengeance" or "maniac agenda")', name="ZANDATSU", photo=raiden_icon))
+pattern_titles.append(PatternTitle('("metal gear" or "snake eater") or "mgs"', name="PUNISHED JESUS", photo=jesus_icon))
+#MARIO
+pattern_titles.append(PatternTitle('("ttyd" or "thousand year door") or "thousand-year door"', name="HYUK HYUK", photo=doopliss_icon))
+pattern_titles.append(PatternTitle('"paper mario"', name="It's a me!", photo=paper_mario_icon))
+pattern_titles.append(PatternTitle('"mario rpg"', name="GENO WHIRL", photo=geno_icon))
+pattern_titles.append(PatternTitle('"mario"', name="It's a me!", photo=memory_mario_icon))
+#ZELDA
+pattern_titles.append(PatternTitle('("zelda" or "hyrule") or ("wind waker" or "tloz")', name="MY BOY", photo=my_boy_icon))
         
 
 class SkipState:
@@ -181,19 +227,13 @@ class MusicBot(discord.Client):
         self.init_ok = False
         self.cached_client_id = None
         
-        self.rebooted = True
-        self.cred_changed = [False]
-        self.one_time_cred_change = [True]
-        
-        self.special_titles = {}
-        self.special_titles["Naruto german opening"] = SpecialTitle("BELIEEEEEEEVE IT!", naruto_img, "NARUTO", naruto_icon)
-        self.special_titles["Bardzo super sławny (Very super famous) - Jon Lajoie POLSKIE NAPISY"] = SpecialTitle("What's up guys, Rocky Reborn here with another music video.", rocky_icon, "ROCKY REBORN", rocky_icon, "20")
-        
-        self.pattern_titles = []
-        self.pattern_titles.append(PatternTitle('("pokemon" or "pokémon") and "skull"', name="YA BOY GUZMA", photo=guzma_icon))
-        self.pattern_titles.append(PatternTitle('"pokemon" or "pokémon"', name="Pika!", photo=pikachu_icon))
-        #self.pattern_titles.append(PatternTitle("pokemon", name="Pika!", photo=pikachu_icon))
-        #self.pattern_titles.append(PatternTitle("pokémon", name="Pika!", photo=pikachu_icon))
+        self.cred_changed = True
+        self.one_time_cred_change = False
+        self.default_volume = "15"
+        self.current_icon = mike_icon
+        self.current_name = "MIKE"
+        self.default_icon = mike_icon
+        self.default_name = "MIKE"
         
         self.channel = None
         self.locked = False
@@ -492,31 +532,36 @@ class MusicBot(discord.Client):
         return self.players[server.id]
         
     async def check_titles(self, player, server, channel, title, msg):        
-        if title in self.special_titles:
-            t = self.special_titles[title]
+        if title in special_titles:
+            t = special_titles[title]
         else:
             #Convert to lowercase first, due to title inconsistencies
             title_l = title.lower()
             title_l = re.sub('[\()]','',title_l)
-            for t in self.pattern_titles:
-                #print(t.pattern.raw)
-                #print(title_l)
-                #print(t.pattern.evaluate(title_l))
+            for t in pattern_titles:
                 if t.pattern.evaluate(title_l):
                     break
                 t = None
         if t:
             if t.name:
+                self.current_name = t.name
                 await self.change_nick(server, channel, t.name)
-                self.cred_changed[0] = True
+                self.cred_changed = True
             if t.photo:
+                self.current_icon = t.photo
                 await self.setavatar(None, t.photo)
-                self.cred_changed[0] = True
-            await self.change_volume(player, new_volume=t.volume)
+                self.cred_changed = True
+            if t.volume:
+                await self.change_volume(player, new_volume=t.volume)
+            else:
+                await self.change_volume(player, new_volume=self.default_volume)
             if t.message:
                 msg = t.message + '\n' + msg
             if t.link:
-                msg += '\n' + t.link               
+                msg += '\n' + t.link
+        else:
+            await self.reset_cred(server, channel)
+            await self.change_volume(player, new_volume=self.default_volume)
         return msg 
 
     async def on_player_play(self, player, entry):
@@ -562,15 +607,7 @@ class MusicBot(discord.Client):
 
     async def on_player_finished_playing(self, player, **_):
         if not player.playlist.entries and not player.current_entry and self.config.auto_playlist:
-            #Reset creds if first run
-            if self.channel:
-                await self.reset_cred(self.channel.server, self.channel, self.one_time_cred_change)
             while self.autoplaylist:
-                #Reset creds
-                if self.channel:
-                    await self.reset_cred(self.channel.server, self.channel, self.cred_changed)
-                #RESET VOLUME
-                await self.change_volume(player, new_volume="10")
                 song_url = choice(self.autoplaylist)
                 info = await self.downloader.safe_extract_info(player.playlist.loop, song_url, download=False, process=False)
 
@@ -897,7 +934,7 @@ class MusicBot(discord.Client):
         BELIEVE IT!
         """
         #Set nickname
-        self.one_time_cred_change[0] = True
+        self.one_time_cred_change = True
         self.channel = channel
         await self.change_nick(server, channel, "KAKASHI")
         #Set avatar
@@ -927,8 +964,6 @@ class MusicBot(discord.Client):
             if index < 0 or index > len(player.playlist.entries):
                 raise ValueError()
             entry = player.playlist.entries[index]
-            #CHECK IF OWNER OR CREATOR OF ENTRY
-            #if author.id == self.config.owner_id or (entry.meta.get('author', False) and entry.meta['author'].id == author.id):
             if self.is_creator(author, entry):
                 player.playlist.entries.remove(entry)
                 return Response('Successfully removed ' + str(o_index) + ' from queue!', delete_after=20)
@@ -936,7 +971,45 @@ class MusicBot(discord.Client):
                 return Response('That\'s not yours to delete!', delete_after=20)
                 
         except ValueError:
-            return Response('Invalid index. Please try again.', delete_after=20)        
+            return Response('Invalid index. Please try again.', delete_after=20)
+
+    @owner_only
+    async def cmd_default(self, player, server, channel, leftover_args):
+        """
+        Usage:
+            {command_prefix}default [command]
+
+        Owner only. Sets defaults for current session.
+        Arguments must follow the flags they specify.
+        User may specify as many arguments as they want in any order.
+        -n for nickname, -a for avatar, -v for volume.
+        Specify no arguments to reset to original defaults.
+        """       
+        if len(leftover_args) == 0:
+            self.default_icon = mike_icon
+            self.default_name = "MIKE"
+            self.default_volume = "15"
+        else:
+            flags = ["-n", "-a", "-v"]
+            leftover_args = shlex.split(' '.join(leftover_args))
+            while len(leftover_args) > 0 and len(flags) > 0:
+                string = leftover_args.pop(0)
+                if string in flags and string == "-n":
+                    flags.remove("-n")
+                    self.default_name = ''
+                    while len(leftover_args) > 0 and leftover_args[0] not in flags:
+                        self.default_name += leftover_args.pop(0) + ' '
+                    self.default_name = self.default_name[:-1]
+                if string in flags and string == "-a" and len(leftover_args) > 0:
+                    flags.remove("-a")
+                    self.default_icon = leftover_args.pop(0)
+                if string in flags and string == "-v" and len(leftover_args) > 0:
+                    flags.remove("-v")
+                    self.default_volume = leftover_args.pop(0)
+        if self.cred_changed == False:
+            await self.reset_cred(server, channel, override=True)  
+            await self.change_volume(player, new_volume=self.default_volume)
+        
         
     async def cmd_help(self, command=None):
         """
@@ -1640,10 +1713,6 @@ class MusicBot(discord.Client):
 
             player.skip()  # check autopause stuff here
             await self._manual_delete_check(message)
-            #Reset creds
-            await self.reset_cred(channel.server, channel, self.cred_changed)
-            #Reset volume
-            await self.change_volume(player, new_volume="10")
             return
 
         # TODO: ignore person if they're deaf or take them out of the list or something?
@@ -1659,10 +1728,6 @@ class MusicBot(discord.Client):
 
         if skips_remaining <= 0:
             player.skip()  # check autopause stuff here
-            #Reset creds
-            await self.reset_cred(channel.server, channel, self.cred_changed)
-            #Reset volume
-            await self.change_volume(player, new_volume="10")
             return Response(
                 'your skip for **{}** was acknowledged.'
                 '\nThe vote to skip has been passed.{}'.format(
@@ -2219,7 +2284,8 @@ class MusicBot(discord.Client):
                     also_delete=message if self.config.delete_invoking else None
                 )
             #If one_time_cred_change: reset
-            await self.reset_cred(message.server, message.channel, self.one_time_cred_change)
+            #await self.reset_cred(message.server, message.channel, self.one_time_cred_change)
+            await self.resume_cred(message.server, message.channel)
 
         except (exceptions.CommandError, exceptions.HelpfulError, exceptions.ExtractionError) as e:
             print("{0.__class__}: {0.message}".format(e))
@@ -2242,13 +2308,42 @@ class MusicBot(discord.Client):
             if self.config.debug_mode:
                 await self.safe_send_message(message.channel, '```\n%s\n```' % traceback.format_exc())
 
-    async def reset_cred(self, server, channel, condition=[False], override=False):
-        if override or (condition[0] and not self.locked):
-            print("reset cred called")
-            condition[0] = False
-            #await self.change_nick(handler_kwargs['server'], handler_kwargs['channel'], "MIKE")
-            await self.change_nick(server, channel, "MIKE")
-            await self.setavatar(None,mike_icon)
+    async def reset_cred(self, server, channel, override=False):
+        if override or (self.cred_changed and not self.locked):
+            self.cred_changed = False
+            await self.change_nick(server, channel, self.default_name)
+            try:
+                await self.setavatar(None, self.default_icon)
+            except Exception as e:
+                self.default_icon = mike_icon
+                print("{0.__class__}: {0.message}".format(e))
+
+                expirein = e.expire_in if self.config.delete_messages else None
+
+                await self.safe_send_message(
+                    channel,
+                    '```\n%s\n```' % e.message,
+                    expire_in=20
+                )
+                
+    async def resume_cred(self, server, channel):
+        if self.one_time_cred_change and not self.locked:
+            self.one_time_cred_change = False
+            await self.change_nick(server, channel, self.current_name)
+            try:
+                await self.setavatar(None, self.current_icon)
+            except Exception as e:
+                self.current_icon = mike_icon
+                print("{0.__class__}: {0.message}".format(e))
+
+                expirein = e.expire_in if self.config.delete_messages else None
+
+                await self.safe_send_message(
+                    channel,
+                    '```\n%s\n```' % e.message,
+                    expire_in=20
+                )    
+            
                 
     async def on_voice_state_update(self, before, after):
         if not all([before, after]):
