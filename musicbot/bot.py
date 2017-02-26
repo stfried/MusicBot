@@ -1,3 +1,4 @@
+#TODO: Fix album paths for MGS folder, all songs are in subfolders
 import os
 import sys
 import time
@@ -9,6 +10,7 @@ import discord
 import asyncio
 import traceback
 import re
+import copy
 
 from discord import utils
 from discord.object import Object
@@ -94,6 +96,9 @@ class BoolEqn:
         return
 
     def evaluate(self, string):
+        string = (re.sub('[\()]','',string)).lower()
+        #title_l = title.lower()
+        #title_l = re.sub('[\()]','',title_l)
         if len(self.components) == 1:
             ret = self.components[0].strip(' "\'\t\r\n\(') in string
             return ret
@@ -109,20 +114,39 @@ class BoolEqn:
             else:
                 ret = left and right
                 return ret
-
         
-
 class PatternTitle:
-    def __init__(self, pattern, message=None, link=None, name=None, photo=None, volume=None):
+    def __init__(self, pattern, message=None, link=None, name=None, photo=None, volume=None, intro_title=None, intro_filename=None):
         #pattern is accepted as a boolean string, ie. '("pokemon" or "pokémon") and "wally"'
         self.message = message
         self.link = link
         self.name = name
         self.photo = photo
         self.volume = volume
+        self.intro_title = intro_title
+        self.intro_filename = intro_filename
         self.pattern = BoolEqn(pattern)
 
+class Album:
+    def __init__(self, pattern, path):
+        self.pattern = BoolEqn(pattern)
+        self.path = path + '\\'
 
+music_path = "C:\\Users\\stfri\\Music\\"
+albums = []
+albums.append(Album("'hotline' or 'miami'", music_path + 'Hotline Miami Soundtrack'))
+albums.append(Album("'double dragon'", music_path + 'Jake Kaufman - Double Dragon Neon'))
+albums.append(Album("'shovel knight'", music_path + 'Jake Kaufman - Shovel Knight Original Soundtrack'))
+albums.append(Album("('legend of zelda' or 'loz') or 'zelda'", music_path + 'LoZ'))
+albums.append(Album("('metal gear rising' or 'mgr') or 'revengeance'", music_path + 'Metal Gear Rising_ Revengeance (Original Game Soundtrack) [Vocal Tracks]'))
+albums.append(Album("'mgs4' or ('metal gear' and '4')", music_path + 'Metal Gear Solid 4 Guns of the Patriots Original Soundtrack'))
+albums.append(Album("('metal gear solid' or 'mgs') and ('20' or 'anniversary')", music_path + 'MGS 20th Anniversary'))
+albums.append(Album("'metal gear solid' or 'mgs'", music_path + 'MGS'))
+albums.append(Album("'paper mario' and ('ttyd' or 'thousand')", music_path + 'Paper Mario'))
+albums.append(Album("'paper mario' and ('color' or 'splash')", music_path + 'PMCS'))
+albums.append(Album("'undertale'", music_path + 'UNDERTALE Soundtrack'))
+albums.append(Album("'watch dogs'", music_path + 'Watch Dogs'))
+albums.append(Album("'xcom'", music_path + 'XCOM 2'))
 
 #IMAGE LINKS
 #NARUTO
@@ -179,7 +203,7 @@ pattern_titles.append(PatternTitle('"paper mario"', name="It's a me!", photo=pap
 pattern_titles.append(PatternTitle('"mario rpg"', name="GENO WHIRL", photo=geno_icon))
 pattern_titles.append(PatternTitle('"mario"', name="It's a me!", photo=memory_mario_icon))
 #ZELDA
-pattern_titles.append(PatternTitle('("zelda" or "hyrule") or ("wind waker" or "tloz")', name="MY BOY", photo=my_boy_icon))
+pattern_titles.append(PatternTitle('("zelda" or "hyrule") or ("wind waker" or "tloz")', name="MY BOY", photo=my_boy_icon, intro_title="DununuNUH!", intro_filename = "custom\\Zelda - Get Item"))
         
 
 class SkipState:
@@ -234,6 +258,7 @@ class MusicBot(discord.Client):
         self.current_name = "MIKE"
         self.default_icon = mike_icon
         self.default_name = "MIKE"
+
         
         self.channel = None
         self.locked = False
@@ -536,10 +561,10 @@ class MusicBot(discord.Client):
             t = special_titles[title]
         else:
             #Convert to lowercase first, due to title inconsistencies
-            title_l = title.lower()
-            title_l = re.sub('[\()]','',title_l)
+            #title_l = title.lower()
+            #title_l = re.sub('[\()]','',title_l)
             for t in pattern_titles:
-                if t.pattern.evaluate(title_l):
+                if t.pattern.evaluate(title):
                     break
                 t = None
         if t:
@@ -2394,7 +2419,105 @@ class MusicBot(discord.Client):
             self.safe_print("[Servers] \"%s\" changed regions: %s -> %s" % (after.name, before.region, after.region))
 
             await self.reconnect_voice_client(after)
+     
+    #Accepts a map of flags with the flag code as key, num args as val, and appropriately stores substrings from leftover_args into flags for handling
+    @staticmethod
+    def optargs(leftover_args, flags):
+        index = 0
+        while (index < len(leftover_args)):
+            string = leftover_args[index]
+            if string[0] == '-':
+                string = string[1:]
+            if string in flags:
+                index += 1
+                num_args = flags[string]
+                if type(num_args) is not int:
+                    raise exceptions.Exception('Error: flag %s was used multiple times.' %string)
+                if num_args == 0:
+                    flags[string] = True
+                    continue
+                if index >= len(leftover_args):
+                    raise exceptions.Exception('Error: flag %s expected %s arguments.' % (string, num_args))
+                flags[string] = []
+                if num_args == -1:
+                    while index < len(leftover_args) and not (leftover_args[index][0] == '-' and leftover_args[index][1:] in flags):
+                        flags[string].append(leftover_args[index])
+                        index += 1
+                else:
+                    for i in range(0, num_args):
+                        if index >= len(leftover_args) or (leftover_args[index][0] == '-' and leftover_args[index][1:] in flags):
+                            raise exceptions.Exception('Error: flag %s expected %s arguments.' % (string, num_args))
+                        flags[string].append(leftover_args[index])
+                        index += 1
+            else:
+                index += 1
 
+    @owner_only
+    async def cmd_play_file(self, player, channel, leftover_args):
+        entry = await player.playlist.generate_entry('https://www.youtube.com/watch?v=d8xoTBZrzko', channel=None, author=None)
+        flags = {}
+        flags['a'] = -1
+        flags['t'] = -1
+        flags['p'] = -1
+        try:
+            self.optargs(leftover_args, flags)
+            if type(flags['a']) is not int:
+                #Album
+                filename = ''
+                for string in flags['a']:
+                    filename += string + ' '
+                filename = filename[:-1]
+                for album in albums:
+                    if album.pattern.evaluate(filename):
+                        filename = album.path
+                        break
+                if type(flags['t']) is not int:
+                    for string in flags['t']:
+                        filename += string + ' '
+                    filename = filename[:-1]
+                else:
+                    raise Exception("Error: Expected song filename.")
+            elif type(flags['p']) is not int:
+                filename = ''
+                for string in flags['p']:
+                    filename += string + ' '
+                filename = filename[:-1]
+            else:
+                filename = 'custom\\'
+                for string in leftover_args:
+                    filename += string + ' '
+                filename = filename[:-1]
+            entry.filename = filename
+            entry.title = filename[filename.rfind('\\')+1:filename.rfind('.')]                                                
+            player.playlist.entries.append(entry)    
+            position = len(player.playlist.entries)
+            reply_text = "Enqueued **%s** to be played. Position in queue: %s"
+            btext = entry.title
+
+            if position == 1 and player.is_stopped:
+                position = 'Up next!'
+                reply_text %= (btext, position)
+
+            else:
+                try:
+                    time_until = await player.playlist.estimate_time_until(position, player)
+                    reply_text += ' - estimated time until playing: %s'
+                except:
+                    traceback.print_exc()
+                    time_until = ''
+
+                reply_text %= (btext, position, time_until)
+                       
+            return Response(reply_text, delete_after=30)
+            
+        except Exception as e:
+            await self.safe_send_message(
+                    channel,
+                    '```\n%s\n```' % e.message,
+                    expire_in=20
+                )
+            return            
+        
 
 if __name__ == '__main__':
     bot = MusicBot()

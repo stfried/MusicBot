@@ -198,6 +198,9 @@ class MusicPlayer(EventEmitter):
         return False
 
     async def _delete_file(self, filename):
+        #print(filename[:12])
+        if filename[:12] != 'audio_cache\\':
+            return
         for x in range(30):
             try:
                 os.unlink(filename)
