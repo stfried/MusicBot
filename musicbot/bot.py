@@ -11,6 +11,7 @@ import asyncio
 import traceback
 import re
 import copy
+import mutagen
 
 from discord import utils
 from discord.object import Object
@@ -198,7 +199,8 @@ pattern_titles.append(PatternTitle('"only thing i know for real"', name="JETSTRE
 pattern_titles.append(PatternTitle('("metal gear rising" or "mgr") or ("revengeance" or "maniac agenda")', name="ZANDATSU", photo=raiden_icon))
 pattern_titles.append(PatternTitle('("metal gear" or "snake eater") or "mgs"', name="PUNISHED JESUS", photo=jesus_icon))
 #MARIO
-pattern_titles.append(PatternTitle('("ttyd" or "thousand year door") or "thousand-year door"', name="HYUK HYUK", photo=doopliss_icon))
+pattern_titles.append(PatternTitle('("ttyd" or (("thousand" and "year") and "door")', name="HYUK HYUK", photo=doopliss_icon))
+#pattern_titles.append(PatternTitle('"color" and "splash"', name="It's a me!", photo=paper_mario_icon, volume=35))
 pattern_titles.append(PatternTitle('"paper mario"', name="It's a me!", photo=paper_mario_icon))
 pattern_titles.append(PatternTitle('"mario rpg"', name="GENO WHIRL", photo=geno_icon))
 pattern_titles.append(PatternTitle('"mario"', name="It's a me!", photo=memory_mario_icon))
@@ -233,7 +235,7 @@ class Response:
 
 
 class MusicBot(discord.Client):
-    def __init__(self, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
+    def __init__(self, icons=True, config_file=ConfigDefaults.options_file, perms_file=PermissionsDefaults.perms_file):
         self.players = {}
         self.the_voice_clients = {}
         self.locks = defaultdict(asyncio.Lock)
@@ -251,6 +253,9 @@ class MusicBot(discord.Client):
         self.init_ok = False
         self.cached_client_id = None
         
+        self.icons = int(icons)
+        if not self.icons:
+            print("Icons and name changes disabled.")
         self.cred_changed = True
         self.one_time_cred_change = False
         self.default_volume = "15"
@@ -612,7 +617,8 @@ class MusicBot(discord.Client):
                 newmsg = 'Now playing in %s: **%s**' % (
                     player.voice_client.channel.name, entry.title)
             #ADD SONG SPECIFIC OUTPUT
-            newmsg = await self.check_titles(player, channel.server, channel, entry.title, newmsg)
+            if self.icons:
+                newmsg = await self.check_titles(player, channel.server, channel, entry.title, newmsg)
             if self.server_specific_data[channel.server]['last_np_msg']:
                 self.server_specific_data[channel.server]['last_np_msg'] = await self.safe_edit_message(last_np_msg, newmsg, send_if_fail=True)
             else:
@@ -959,11 +965,12 @@ class MusicBot(discord.Client):
         BELIEVE IT!
         """
         #Set nickname
-        self.one_time_cred_change = True
-        self.channel = channel
-        await self.change_nick(server, channel, "KAKASHI")
-        #Set avatar
-        await self.setavatar(None,kakashi_icon)
+        if self.icons:
+            self.one_time_cred_change = True
+            self.channel = channel
+            await self.change_nick(server, channel, "KAKASHI")
+            #Set avatar
+            await self.setavatar(None,kakashi_icon)
         response = await self.cmd_play(player, channel, author, permissions, None, 'https://www.youtube.com/watch?v=d8xoTBZrzko')
         response.content = "Naruto! I'm on my way!\n" + response.content + "\n" + kakashi_img
         return response
@@ -2487,6 +2494,12 @@ class MusicBot(discord.Client):
                 for string in leftover_args:
                     filename += string + ' '
                 filename = filename[:-1]
+            #Check valid audio file, get audio length
+            file = mutagen.File(filename)
+            try:
+                entry.length = file.info.length
+            except Exception as e:
+                raise exceptions.CommandError(e, expire_in=20)
             entry.filename = filename
             entry.title = filename[filename.rfind('\\')+1:filename.rfind('.')]                                                
             player.playlist.entries.append(entry)    

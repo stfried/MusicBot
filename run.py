@@ -125,7 +125,7 @@ def main():
 
             if pycom:
                 print("Python 3 found.  Launching bot...")
-                os.system('start cmd /k %s run.py' % pycom)
+                os.system('start cmd /k %s run.py %s' % (pycom, sys.argv[1]))
                 sys.exit(0)
 
         else:
@@ -160,7 +160,7 @@ def main():
         m = None
         try:
             from musicbot import MusicBot
-            m = MusicBot()
+            m = MusicBot(icons=sys.argv[1])
             print("Connecting...", end='', flush=True)
             m.run()
 

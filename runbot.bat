@@ -1,4 +1,9 @@
 @ECHO off
+SET Icons=%1
+IF [%1]==[] (
+    SET Icons=1
+)
+
 
 CHCP 65001 > NUL
 CD /d "%~dp0"
@@ -21,7 +26,7 @@ ENDLOCAL
 
 
 IF EXIST %SYSTEMROOT%\py.exe (
-    CMD /k py.exe -3.5 run.py
+    CMD /k py.exe -3.5 run.py %Icons%
     EXIT
 )
 
